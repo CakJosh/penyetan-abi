@@ -5,6 +5,7 @@ use App\Http\Controllers\MenuController;
 use App\Http\Controllers\Admin\AccountController; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Artisan; // <-- Ini yang bikin kode di bawah tidak merah lagi!
 
 // ==========================================
 // 1. RUTE UNTUK USER / PELANGGAN
@@ -78,3 +79,15 @@ Route::resource('admin/menu', MenuController::class)->names('admin.menu');
 // Manajemen Akun Admin
 Route::get('/admin/akun', [AccountController::class, 'index'])->name('admin.akun.index');
 Route::post('/admin/akun', [AccountController::class, 'update'])->name('admin.akun.update');
+
+// ==========================================
+// 3. RUTE DARURAT JALANKAN MIGRASI
+// ==========================================
+Route::get('/jalankan-migrasi-rahasia', function() {
+    try {
+        Artisan::call('migrate', ['--force' => true]);
+        return "Selamat Josh, database Penyetan Abi sukses terbuat!";
+    } catch (\Exception $e) {
+        return "Gagal karena: " . $e->getMessage();
+    }
+});
