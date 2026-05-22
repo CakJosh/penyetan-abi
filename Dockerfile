@@ -1,4 +1,4 @@
-# 1. Gunakan PHP 8.2 berbasis Alpine Linux (Sangat ringan dan stabil di server cloud)
+# 1. Gunakan PHP 8.2 berbasis Alpine Linux
 FROM php:8.2-fpm-alpine
 
 # 2. Instal library sistem Linux dan Nginx yang dibutuhkan Laravel
@@ -57,5 +57,5 @@ RUN echo 'server { \
 # 9. Buka jalur port web standar (80)
 EXPOSE 80
 
-# 10. Jalankan mesin PHP (php-fpm) dan Web Server (nginx) bersamaan saat server hidup
-CMD ["sh", "-c", "php-fpm -D && nginx -g 'daemon off;'"]
+# 10. JALANKAN MIGRASI DATABASE LALU NYALAKAN NGINX SEBAGAI PROSES UTAMA (ANTI CRASH)
+CMD sh -c "php artisan migrate --force && php-fpm -D && nginx -g 'daemon off;'"
