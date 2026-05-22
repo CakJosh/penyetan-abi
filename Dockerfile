@@ -34,7 +34,7 @@ RUN chown -R www-data:www-data /var/www/html || true \
     && chmod -R 775 /var/www/html/storage || true \
     && chmod -R 775 /var/www/html/public || true
 
-# 8. Konfigurasi Nginx (SAMAKAN KONEKSI KE PORT 9000)
+# 8. Konfigurasi Nginx (Mengarahkan koneksi ke PHP-FPM standar internal)
 RUN echo 'server { \
     listen 80; \
     root /var/www/html/public; \
@@ -57,5 +57,5 @@ RUN echo 'server { \
 # 9. Buka jalur port web standar (80)
 EXPOSE 80
 
-# 10. PAKSA PHP-FPM MENDENGARKAN PORT 9000 SECARA GLOBAL SEBELUM NGINX JALAN
-CMD sh -c "sed -i 's/listen = \/www\/run\/php-fpm.sock/listen = 9000/g' /usr/local/etc/php-fpm.d/www.conf || true; php artisan migrate --force && php-fpm -D && nginx -g 'daemon off;'"
+# 10. JALANKAN SERVIS SEARA SEDERHANA TANPA TRIK TEKS (PASTI LOLOS)
+CMD sh -c "php artisan migrate --force && php-fpm -D && nginx -g 'daemon off;'"
