@@ -16,8 +16,10 @@ RUN apt-get update && apt-get install -y \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo_mysql gd
 
-# 4. Aktifkan modul mod_rewrite Apache agar routing URL Laravel bekerja normal
-RUN a2enmod rewrite
+# 4. FIX ERROR MPM: Aktifkan mod_rewrite dan pastikan HANYA mpm_prefork yang jalan (matikan mpm_event)
+RUN a2enmod rewrite \
+    && a2dismod mpm_event || true \
+    && a2enmod mpm_prefork || true
 
 # 5. Set folder kerja utama di dalam server Linux
 WORKDIR /var/www/html
