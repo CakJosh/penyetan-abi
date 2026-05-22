@@ -1,61 +1,50 @@
-# 1. Gunakan PHP 8.2 berbasis Alpine Linux
-FROM php:8.2-fpm-alpine
+# 1. Gunakan image PHP resmi yang sudah lengkap dengan web server Apache (Sangat stabil untuk Laravel)
+FROM php:8.2-apache
 
-# 2. Instal library sistem Linux dan Nginx yang dibutuhkan Laravel
-RUN apk update && apk add --no-cache \
-    nginx \
+# 2. Instal library sistem Linux yang dibutuhkan oleh Laravel
+RUN apt-get update && apt-get install -y \
     libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     zip \
     unzip \
     git \
     curl \
-    bash \
-    && rm -rf /var/cache/apk/*
+    && rm -rf /var/lib/apt/lists/*
 
-# 3. Instal ekstensi PHP untuk MySQL (Database) dan GD (Gambar)
+# 3. Konfigurasi dan instal ekstensi PHP (PDO MySQL untuk database & GD untuk gambar)
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo_mysql gd
 
-# 4. Set folder kerja utama aplikasi di dalam server
+# 4. HAPUS TOTAL MODUL MPM EVENT AGAR TIDAK BENTROK DI RAILWAY (SOLUSI ABSOLUT)
+RUN a2enmod rewrite \
+    && rm -f /etc/apache2/mods-enabled/mpm_event.load \
+    && rm -f /etc/apache2/mods-enabled/mpm_event.conf \
+    && a2enmod mpm_prefork || true
+
+# 5. Set folder kerja utama di dalam server Linux
 WORKDIR /var/www/html
 
-# 5. Salin seluruh kodingan dari laptop kamu
+# 6. Salin seluruh kodingan dari laptop kamu
 COPY . .
 
-# 6. Bersihkan file cache bawaan lokal laptop agar tidak konflik di server
+# 7. Bersihkan file cache sampah bawaan lokal laptop agar tidak konflik
 RUN rm -f bootstrap/cache/*.php \
     && rm -rf storage/framework/views/*.php \
     && rm -rf storage/framework/sessions/*
 
-# 7. Atur hak akses folder agar Laravel bisa menulis log dan upload file
-RUN chown -R www-data:www-data /var/www/html || true \
-    && chmod -R 775 /var/www/html/storage || true \
-    && chmod -R 775 /var/www/html/public || true
+# 8. Berikan hak akses (permission) penuh ke folder storage dan public
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 /var/www/html/storage \
+    && chmod -R 775 /var/www/html/public
 
-# 8. Konfigurasi Nginx (Mengarahkan koneksi ke PHP-FPM standar internal)
-RUN echo 'server { \
-    listen 80; \
-    root /var/www/html/public; \
-    index index.php index.html; \
-    charset utf-8; \
-    location / { \
-        try_files $uri $uri/ /index.php?$query_string; \
-    } \
-    location ~ \.php$ { \
-        try_files $uri =404; \
-        fastcgi_split_path_info ^(.+\.php)(/.+)$; \
-        fastcgi_pass 127.0.0.1:9000; \
-        fastcgi_index index.php; \
-        include fastcgi_params; \
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; \
-        fastcgi_param PATH_INFO $fastcgi_path_info; \
-    } \
-}' > /etc/nginx/http.d/default.conf
+# 9. Ubah Document Root Apache agar langsung mengarah ke folder public bawaan Laravel
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
 
-# 9. Buka jalur port web standar (80)
+# 10. Buka jalur port web standar (80)
 EXPOSE 80
 
-# 10. JALANKAN SERVIS SEARA SEDERHANA TANPA TRIK TEKS (PASTI LOLOS)
-CMD sh -c "php artisan migrate --force && php-fpm -D && nginx -g 'daemon off;'"
+# 11. JALANKAN MIGRASI DATABASE LALU HIDUPKAN APACHE SECARA UTAMA
+CMD sh -c "php artisan migrate --force && apache2-foreground"
